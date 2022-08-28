@@ -121,6 +121,54 @@ const createWallet = async function(firstName, lastName, email, ref, phone, coun
         console.log(error.config);
     };
 }
+
+const claimEscrow = async function(paymentId, escrowId, amount) {
+  try {
+    let data = {
+      amount: amount
+    }
+
+    const url_path = `/payments/${paymentId}/escrows/${escrowId}/escrow_releases`;                                                                                                                    // Hardkeyed for this example.
+    const http_method = "post";    
+
+    const salt = CryptoJS.lib.WordArray.random(12);                         
+    const timestamp = (Math.floor(new Date().getTime() / 1000) - 10).toString(); 
+
+    const headers = {
+        access_key,
+        signature: getSignature(url_path, http_method, JSON.stringify(data), salt, timestamp),
+        salt,
+        timestamp,
+        "Content-Type": `application/json`,
+    };
+
+
+    const request = {
+        baseURL: "https://sandboxapi.rapyd.net",
+        headers,
+        url: url_path,
+        method: http_method,
+        data
+    };
+
+    const response = await axios(request);
+    console.log(response)
+  } catch (error) {
+    if (error.response) {
+      console.log(error.response.data);
+      console.log(error.response.status);
+      console.log(error.response.headers);
+    } else if (error.request) {
+      console.log(error.request);
+    } else {
+      console.log('Error', error.message);
+    }
+    console.log(error)
+    throw new Error("something went wrong")
+  }
+}
+
+
 // creates customers and attaches ewallet to it
 const createCustomer = async function() {
     try {
@@ -245,7 +293,8 @@ module.exports = {
   createCustomer,
   createPayment,
   createWallet,
-  getEscrow
+  getEscrow,
+  claimEscrow
 }
 
 
