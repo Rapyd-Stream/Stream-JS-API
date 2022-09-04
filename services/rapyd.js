@@ -1,8 +1,9 @@
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
-const access_key = process.env.ACCESS_KEY                                        
-const secret_key = process.env.SECRET_KEY
+const access_key = process.env.TEST_ACCESS_KEY                                        
+const secret_key = process.env.TEST_SECRET_KEY
+const db_key = process.env.TEST_DB_STRING
 
 const axios = require("axios");
 const CryptoJS = require("crypto-js");
@@ -12,7 +13,7 @@ const Escrow = require("../models/Escrow.js")
 
 const initDB = async function() {
   try {
-    con = await mongoose.connect('mongodb+srv://admin:KYFsFSpzIfYtGk1T@cluster0.noix4tq.mongodb.net/?retryWrites=true&w=majority'); 
+    con = await mongoose.connect(db_key); 
   } catch (e) {
     console.log(e)
   }
