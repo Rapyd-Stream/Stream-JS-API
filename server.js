@@ -3,7 +3,7 @@ const express = require('express')
 const bodyParser = require('body-parser');
 const app = express()
 const cors = require('cors');
-const port = 3000
+const port = process.env.PORT || 3000
 
 // load rapyd service
 const rapyd = require('./services/rapyd');
