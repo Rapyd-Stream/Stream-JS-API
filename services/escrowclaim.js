@@ -1,36 +1,69 @@
 const rapyd = require('./rapyd');
+const Escrow = require("../models/Escrow.js")
 
-// serverless service inputs paymentId and escrowId
+const getEscrowClaimAmount = function(escrow) {
+    // get the current interval 
+    let seconds = escrow.timestampFinish - escrow.timestampStart
+    let claimPerSecond = escrow.totalAmountUSD / seconds 
+    let currentTimeInSeconds = (parseInt(Date.now() / 1000))
+    let interval = currentTimeInSeconds - escrow.timestampStart
 
-const run = async function() {
+    if(interval > seconds) interval = seconds 
+    let intervalClaim = claimPerSecond * interval
+
+    // in case there is a rounding thats higher than amount left
+    if(intervalClaim > escrow.amountLeftUSD) {
+        intervalClaim = escrow.amountLeftUSD
+    }
+
+    return intervalClaim.toFixed(3)
+}
+
+const createClaim = async function(escrow, amount) {
     try {
-        let res = await rapyd.claimEscrow("payment_48983dba504fbb9584bb418476735149", "escrow_ce78418d3f915bba72f6d3d220119643", 10)
-        console.log(res)
+        let res = await rapyd.claimEscrow(escrow.paymentId, escrow.escrowId, amount)
+        if(res.data.status.status === 'SUCCESS') {
+            const update = {
+                amountLeftUSD: res.data.data.amount_on_hold,
+                amountReleasedUSD: escrow.totalAmountUSD - res.data.data.amount_on_hold
+            }
+            if(res.data.data.amount_on_hold === 0) {
+                Escrow.setClaimInProgressFalse(escrow._id)
+            } 
+            let obj = await Escrow.findOneAndUpdate(escrow._id, update)
+            return obj
+        }
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+exports.runEscrowClaim = async function() {
+    try {
+        console.log("START ESCROW CLAIM")
+        let promiseArray = []
+        let escrows = await Escrow.getClaimableEscrows()
+        escrows.forEach(async escrow => {
+            let amount = getEscrowClaimAmount(escrow)
+            let clAmount = amount - escrow.amountReleasedUSD
+            if(clAmount > 0.001) {
+                promiseArray.push(createClaim(escrow, clAmount))
+                await createClaim(escrow, clAmount)
+            }
+        })
+        let pm = await Promise.all(promiseArray)
+        console.log(pm)
     } catch(e) {
         console.log(e)
     }
 }
 
-run()
-
-
-// 1 store all payments in database
-// upon saving a payment set a payment interval eg 10 sec 
-// run script every 10 seconds to loop over database and get payments that need to be checked 
-
-
-
-
-// // run the service for a specific escrow
-// const claimEscrow = function(paymentId, escrowId) {
-
-// }
-
-// // calculate the amount that is needed for this claim
-// const calculateClaimAmount = function() {
-//     // minimum claim 1 cent
-//     // 
-// }
+let escrowObject = {
+    timestampStart: String,
+    timestampFinish: String, 
+    totalClaimed: Number, 
+    interval: Number
+}
 
 
 

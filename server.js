@@ -5,15 +5,14 @@ const app = express()
 const cors = require('cors');
 const port = 3000
 
-
 // load rapyd service
 const rapyd = require('./services/rapyd');
+const escrowClaim = require("./services/escrowclaim");
 
 app.use(cors());
 app.use(bodyParser.json())
 
 app.post('/stream/get', async(req,res) => {
-    let responseObject = {}
     let postData = req.body;
     if(!postData.escrowId || !postData.paymentId) {
         responseObject = { message: "missing parameters (required: escrowId and paymentId", type: "error"}
@@ -28,7 +27,6 @@ app.post('/stream/get', async(req,res) => {
 })
  
 app.post('/stream/create', async (req, res) => {
-    console.log(req.body)
     let responseObject = {}
     let postData = req.body;
     if(!postData.amount || !postData.numberDays) {
@@ -58,7 +56,21 @@ app.post('/stream/create', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Stream backend listening on port ${port}`)
-  })
+})
+
+const CronJob = require('cron').CronJob;
+
+const job = new CronJob({
+      cronTime: '0 * * * * *',
+      onTick: function () {
+        // Do daily function
+        escrowClaim.runEscrowClaim()
+        console.log('cron finish');
+      },
+      start: false
+    });
+
+job.start();
 
 
   

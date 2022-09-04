@@ -1,10 +1,26 @@
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+
+const access_key = process.env.ACCESS_KEY                                        
+const secret_key = process.env.SECRET_KEY
+
 const axios = require("axios");
 const CryptoJS = require("crypto-js");
+const mongoose = require("mongoose")
+const Escrow = require("../models/Escrow.js")
 
-require('dotenv').config()
+const buf = Buffer.from('BASIC=basic')
 
-const access_key = process.env.ACCESS_KEY;                                                       
-const secret_key = process.env.SECRET_KEY;                                                       // Never transmit the secret key by itself.
+console.log(process.env.ACCESS_KEY) 
+console.log(process.env.SECRET_KEY) 
+
+const initDB = async function() {
+  try {
+    con = await mongoose.connect('mongodb+srv://admin:KYFsFSpzIfYtGk1T@cluster0.noix4tq.mongodb.net/?retryWrites=true&w=majority'); 
+  } catch (e) {
+    console.log(e)
+  }
+}
 
 // build signature for http request
 const getSignature = (url_path, http_method, data, salt, timestamp) => {
@@ -125,15 +141,16 @@ const createWallet = async function(firstName, lastName, email, ref, phone, coun
 const claimEscrow = async function(paymentId, escrowId, amount) {
   try {
     let data = {
-      amount: amount
+      amount
     }
 
-    const url_path = `/payments/${paymentId}/escrows/${escrowId}/escrow_releases`;                                                                                                                    // Hardkeyed for this example.
+    const url_path = `/v1/payments/${paymentId}/escrows/${escrowId}/escrow_releases`;                                                                                                             // Hardkeyed for this example.
     const http_method = "post";    
 
-    const salt = CryptoJS.lib.WordArray.random(12);                         
+    const salt = CryptoJS.lib.WordArray.random(12) + '5';                         
     const timestamp = (Math.floor(new Date().getTime() / 1000) - 10).toString(); 
 
+    
     const headers = {
         access_key,
         signature: getSignature(url_path, http_method, JSON.stringify(data), salt, timestamp),
@@ -152,7 +169,7 @@ const claimEscrow = async function(paymentId, escrowId, amount) {
     };
 
     const response = await axios(request);
-    console.log(response)
+    return response
   } catch (error) {
     if (error.response) {
       console.log(error.response.data);
@@ -164,7 +181,6 @@ const claimEscrow = async function(paymentId, escrowId, amount) {
       console.log('Error', error.message);
     }
     console.log(error)
-    throw new Error("something went wrong")
   }
 }
 
@@ -247,10 +263,11 @@ const createPayment = async function(amount, numberOfDays) {
               },
               metadata: {
                 merchant_defined: true
-              }
+              },
+              capture: true,
             },
-            capture: true
           }
+          data["3DS_required"] = false
           const url_path = "/v1/payments";                                       // Portion after the base URL.                                                                                // Hardkeyed for this example.
           const http_method = "post";    
 
@@ -272,9 +289,16 @@ const createPayment = async function(amount, numberOfDays) {
               method: http_method,
               data
             };
-    
             const response = await axios(request);
-            return response.data
+            if(response.data) {
+              let dat = response.data.data
+              console.log(response.data)
+              let timestampFinish = dat.created_at + (dat.escrow.escrow_release_days * 86400)
+              await Escrow.createEscrow(dat.id, dat.escrow.id, dat.original_amount, dat.created_at, timestampFinish, 0, dat.original_amount, true)
+              return response.data
+            } else {
+              throw new Error("database error")
+            }
     }  catch(error) {
         if (error.response) {
           console.log(error.response.data);
@@ -288,6 +312,11 @@ const createPayment = async function(amount, numberOfDays) {
         throw new Error("something went wrong")
       };
 }
+
+const run = async function() {
+  await initDB()
+}
+run()
 
 module.exports = {
   createCustomer,
