@@ -9,10 +9,6 @@ const CryptoJS = require("crypto-js");
 const mongoose = require("mongoose")
 const Escrow = require("../models/Escrow.js")
 
-const buf = Buffer.from('BASIC=basic')
-
-console.log(process.env.ACCESS_KEY) 
-console.log(process.env.SECRET_KEY) 
 
 const initDB = async function() {
   try {

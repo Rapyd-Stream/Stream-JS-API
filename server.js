@@ -70,9 +70,4 @@ const job = new CronJob({
       start: false
     });
 
-job.start();
-
-
-  
-    // "escrowId": "escrow_dccfdf81383ff9b671cbd0c591148ab2",
-    // "paymentId": "payment_c134dacdec6db7d22c1df5a7b1a41f89"
+job.start()
