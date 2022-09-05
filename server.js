@@ -27,6 +27,7 @@ app.post('/stream/get', async(req,res) => {
 })
  
 app.post('/stream/create', async (req, res) => {
+    console.log("creating stream")
     let responseObject = {}
     let postData = req.body;
     if(!postData.amount || !postData.numberDays) {
@@ -47,8 +48,10 @@ app.post('/stream/create', async (req, res) => {
             let resp = await rapyd.createPayment(postData.amount, postData.numberDays)
             let escrowId = resp.data.escrow.id
             let paymentId = resp.data.id
+            console.log(resp, "response")
             return res.json({escrowId, paymentId, type: "success"})
         } catch (e) {
+            console.log(e, "error")
             return res.json({messsage: "general service error", type: "error"})
         }
     }
