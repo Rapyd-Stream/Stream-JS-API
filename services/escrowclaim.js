@@ -16,7 +16,7 @@ const getEscrowClaimAmount = function(escrow) {
         intervalClaim = escrow.amountLeftUSD
     }
 
-    return intervalClaim.toFixed(3)
+    return intervalClaim.toFixed(3) ? intervalClaim.toFixed(3) : 0
 }
 
 const createClaim = async function(escrow, amount) {
